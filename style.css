@@ -1,0 +1,256 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f7f7f7;
+    box-sizing: border-box;
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 80vmin;
+    max-width: 80%;
+    padding: 5px 0;
+}
+
+.score-container {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+@media (max-height: 700px) {
+    .game-container {
+        width: 75vmin;
+        max-width: 75%;
+        gap: 8px;
+        padding: 3px 0;
+    }
+    
+    .score-container {
+        font-size: 16px;
+        margin-bottom: 2px;
+    }
+}
+
+@media (max-height: 600px) {
+    .game-container {
+        width: 70vmin;
+        max-width: 70%;
+        gap: 5px;
+        padding: 2px 0;
+    }
+    
+    .score-container {
+        font-size: 14px;
+        margin-bottom: 1px;
+    }
+}
+
+@media (max-height: 500px) {
+    .game-container {
+        width: 65vmin;
+        max-width: 65%;
+        gap: 3px;
+        padding: 1px 0;
+    }
+    
+    .score-container {
+        font-size: 12px;
+        margin-bottom: 0;
+    }
+}
+
+canvas {
+    background-color: #e0e0e0;
+    border: 6px solid #4CAF50;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    image-rendering: pixelated; /* Makes grid edges sharper */
+}
+
+@media (max-height: 700px) {
+    canvas {
+        border-width: 4px;
+    }
+}
+
+@media (max-height: 600px) {
+    canvas {
+        border-width: 3px;
+    }
+}
+
+@media (max-height: 500px) {
+    canvas {
+        border-width: 2px;
+    }
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+#start {
+    padding: 10px 15px;
+    font-size: 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin: 8px 0;
+    text-align: center;
+    white-space: normal;
+    max-width: 100%;
+}
+
+@media (max-height: 700px) {
+    #start {
+        padding: 6px 10px;
+        font-size: 14px;
+        margin: 5px 0;
+    }
+    
+    .controls {
+        gap: 5px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+}
+
+@media (max-height: 600px) {
+    #start {
+        padding: 5px 8px;
+        font-size: 12px;
+        margin: 3px 0;
+    }
+    
+    .controls {
+        gap: 3px;
+        margin-top: 3px;
+        margin-bottom: 3px;
+    }
+}
+
+@media (max-height: 500px) {
+    #start {
+        padding: 3px 6px;
+        font-size: 10px;
+        margin: 2px 0;
+    }
+    
+    .controls {
+        gap: 2px;
+        margin-top: 2px;
+        margin-bottom: 2px;
+    }
+}
+
+#start:hover {
+    background-color: #45a049;
+}
+
+.mobile-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.horizontal-controls {
+    display: flex;
+    gap: 20px;
+}
+
+.mobile-controls button {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    background-color: #f0f0f0;
+    border: 2px solid #ccc;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 3px;
+}
+
+/* Responsive controls for different screen sizes */
+@media (max-height: 700px) {
+    .mobile-controls button {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+        margin: 2px;
+    }
+    
+    .horizontal-controls {
+        gap: 12px;
+    }
+}
+
+@media (max-height: 600px) {
+    .mobile-controls button {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+        margin: 1px;
+    }
+    
+    .horizontal-controls {
+        gap: 10px;
+    }
+}
+
+@media (max-height: 500px) {
+    .mobile-controls button {
+        width: 35px;
+        height: 35px;
+        font-size: 14px;
+        margin: 0;
+    }
+    
+    .horizontal-controls {
+        gap: 8px;
+    }
+    
+    .mobile-controls {
+        gap: 3px;
+    }
+}
+
+.mobile-controls {
+    display: none;
+}
