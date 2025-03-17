@@ -45,6 +45,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Set initial rotation to 0 degrees for the starting screen
             currentRotation = 0;
             draw();
+            
+            // Pre-warm audio to avoid first-play lag
+            try {
+                // Attempt to pre-warm audio with a silent play (will usually fail due to autoplay restrictions)
+                // but Safari sometimes allows it and it can help reduce first-play lag
+                enableAudio();
+            } catch(e) {
+                // Ignore any errors
+            }
         }
     }
     
@@ -56,9 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
         { x: Math.floor(gridSize / 2), y: Math.floor(gridSize / 2) }
     ];
     let food = {};
-    let direction = 'right';
-    let nextDirection = 'right';
-    let lastDirection = 'right';
+    let direction = 'up';
+    let nextDirection = 'up';
+    let lastDirection = 'up';
     let animationProgress = 0; // 0 to 1 for smooth animation
     let lastFrameTime = 0;
     let moveTimer = 0;
@@ -72,6 +81,74 @@ document.addEventListener('DOMContentLoaded', () => {
     let cooldownActive = false; // Cooldown flag after dying
     let cooldownTimer = 0; // Timer for cooldown period
     const COOLDOWN_DURATION = 500; // 0.5 seconds in milliseconds
+    
+    // Safari-optimized audio system
+    // Pre-load multiple audio instances to eliminate first-play lag
+    const MAX_SOUNDS = 3;  // Number of audio instances to pre-create
+    const soundPool = [];
+    let currentSound = 0;
+    let audioEnabled = true;
+    
+    // Flag to detect when we've had the first user interaction
+    let hasInteracted = false;
+    
+    // Create multiple sound instances
+    for (let i = 0; i < MAX_SOUNDS; i++) {
+        const sound = new Audio('apple_crunch.mp3');
+        // Set to extremely low volume during load to avoid initial pop
+        sound.volume = 0.001;
+        soundPool.push(sound);
+        
+        // Prevent memory issues by explicitly unloading sounds on page unload
+        window.addEventListener('beforeunload', () => {
+            sound.src = '';
+            sound.load();
+        });
+        
+        // Handle errors silently
+        sound.onerror = () => {
+            // If we get an error, disable audio so we don't keep trying
+            audioEnabled = false;
+        };
+        
+        // Preload the sound
+        sound.load();
+    }
+    
+    // Handle user interaction to overcome autoplay restrictions
+    function enableAudio() {
+        if (hasInteracted) return;
+        hasInteracted = true;
+        
+        // Try to pre-play all sounds at silent volume
+        soundPool.forEach(sound => {
+            sound.volume = 0;
+            sound.muted = true;
+            
+            // Using a promise with catch to handle errors silently
+            const promise = sound.play();
+            if (promise !== undefined) {
+                promise.catch(() => {
+                    // Autoplay failed, we'll try again when user clicks
+                    audioEnabled = true; // Keep trying
+                });
+            }
+            
+            // Pause immediately
+            setTimeout(() => {
+                try {
+                    sound.pause();
+                    sound.currentTime = 0;
+                    sound.muted = false;
+                } catch(e) {}
+            }, 1);
+        });
+    }
+    
+    // Add event listeners to enable audio on user interaction (needed for Safari)
+    document.addEventListener('click', enableAudio, { once: true });
+    document.addEventListener('touchstart', enableAudio, { once: true });
+    document.addEventListener('keydown', enableAudio, { once: true });
     
     // Track positions for smooth animation
     let prevPositions = [];
@@ -88,6 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update high score display
     highScoreElement.textContent = highScore;
+    
+    // Set initial button text based on device
+    updateStartButtonText();
 
     // Random food placement
     function placeFood(forceNew = true) {
@@ -562,6 +642,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Check for food collision
             if (head.x === food.x && head.y === food.y) {
+                // Play the sound in the background
+                // This happens outside the critical rendering path
+                setTimeout(playSound, 1);
+                
                 // Increase score (1 point per apple)
                 score += 1;
                 scoreElement.textContent = score;
@@ -621,10 +705,75 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Helper function to detect if running on a mobile device
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+               (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+    }
+    
+    // Safari and Chrome optimized sound function using pre-warmed sound pool
+    function playSound() {
+        // Skip if audio is disabled
+        if (!audioEnabled) return;
+        
+        try {
+            // Enable audio if this is the first interaction (won't do anything if already enabled)
+            enableAudio();
+            
+            // Use the next sound in the pool
+            const sound = soundPool[currentSound];
+            
+            // Increment and wrap around the sound index
+            currentSound = (currentSound + 1) % MAX_SOUNDS;
+            
+            // Reset the sound to the beginning
+            try {
+                sound.currentTime = 0;
+            } catch(e) {
+                // Some browsers throw errors when setting currentTime too early
+            }
+            
+            // Set normal volume for playback
+            sound.volume = 0.7;
+            
+            // Use setTimeout to move sound playback completely off the game loop
+            setTimeout(() => {
+                // Play the sound with promise handling
+                try {
+                    const playPromise = sound.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(e => {
+                            // Silent fail
+                        });
+                    }
+                } catch(e) {
+                    // Silent fail
+                }
+            }, 1);
+        } catch(e) {
+            // Silent fail
+        }
+    }
+    
+    // Update button text based on device type
+    function updateStartButtonText() {
+        if (isMobileDevice()) {
+            startButton.textContent = gameActive ? 'Restart Game' : 'Start Game (or swipe in any direction)';
+        } else {
+            startButton.textContent = gameActive ? 'Restart Game' : 'Start Game (or press any arrow key)';
+        }
+    }
+    
     // Game over function
     function gameOver() {
         gameActive = false;
-        startButton.textContent = 'Restart Game (or press any arrow key)';
+        
+        // Different text for mobile and desktop
+        if (isMobileDevice()) {
+            startButton.textContent = 'Restart Game (or swipe in any direction)';
+        } else {
+            startButton.textContent = 'Restart Game (or press any arrow key)';
+        }
 
         // Set cooldown after dying
         cooldownActive = true;
@@ -660,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Initialize or restart game
-    function initGame(startDir = 'right') {
+    function initGame(startDir = 'up') {
         // If cooldown is active, don't allow game to start
         if (cooldownActive) return;
         
@@ -670,12 +819,15 @@ document.addEventListener('DOMContentLoaded', () => {
             cellSize = newCellSize;
         }
         
+        // Update button text based on device type
+        updateStartButtonText();
+        
         // Reset game state
         snake = [
             { x: Math.floor(gridSize / 2), y: Math.floor(gridSize / 2) }
         ];
         
-        // Set initial direction based on parameter or default to right
+        // Set initial direction based on parameter or default to up
         direction = startDir;
         nextDirection = startDir;
         lastDirection = startDir;
@@ -797,6 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    
     // Helper function for mobile controls
     function handleDirectionButton(dir) {
         // If cooldown is active, ignore all inputs
@@ -855,4 +1008,62 @@ document.addEventListener('DOMContentLoaded', () => {
             draw();
         }
     });
+    
+    // Touch swipe controls for mobile
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    
+    // Minimum distance for a swipe to be registered
+    const minSwipeDistance = 30;
+    
+    // Set up touch event listeners on the entire document
+    document.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, false);
+    
+    document.addEventListener('touchend', (e) => {
+        // If cooldown is active, ignore touch inputs
+        if (cooldownActive) return;
+        
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        
+        handleSwipe();
+    }, false);
+    
+    // Prevent scrolling when touching the game container
+    document.querySelector('.game-container').addEventListener('touchmove', (e) => {
+        e.preventDefault();
+    }, { passive: false });
+    
+    function handleSwipe() {
+        // Calculate horizontal and vertical distance
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        
+        // Check if the swipe distance meets the minimum threshold
+        if (Math.abs(deltaX) < minSwipeDistance && Math.abs(deltaY) < minSwipeDistance) {
+            return; // Not a swipe, just a tap
+        }
+        
+        // Determine the direction of the swipe
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // Horizontal swipe
+            if (deltaX > 0) {
+                handleDirectionButton('right');
+            } else {
+                handleDirectionButton('left');
+            }
+        } else {
+            // Vertical swipe
+            if (deltaY > 0) {
+                handleDirectionButton('down');
+            } else {
+                handleDirectionButton('up');
+            }
+        }
+    }
 });
